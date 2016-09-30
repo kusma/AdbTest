@@ -126,13 +126,16 @@ namespace AdbTest
             var ret = new List<Device>();
             foreach (var line in response.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                // TODO: be more graceful in the parsing here
                 var parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 var serial = parts[0];
-                var product = parts[2].Split(':')[1];
-                var model = parts[3].Split(':')[1];
-                var device = parts[4].Split(':')[1];
-                ret.Add(new Device(serial, product, model, device));
+                if (parts[1] == "device")
+                {
+                    // TODO: be more graceful in the parsing here
+                    var product = parts[2].Split(':')[1];
+                    var model = parts[3].Split(':')[1];
+                    var device = parts[4].Split(':')[1];
+                    ret.Add(new Device(serial, product, model, device));
+                }
             }
             return ret.ToArray();
         }
@@ -141,30 +144,60 @@ namespace AdbTest
     public class DeviceListener
     {
         readonly NetworkStream _stream;
+        Device[] _devices;
 
         public DeviceListener()
         {
             _stream = Adb.TrackDevices();
         }
 
+        public Device[] AttachedDevices { get { return _devices.ToArray(); } }
+
+        public class DeviceEventArgs : EventArgs
+        {
+            public Device Device { get; internal set; }
+        }
+
+        public delegate void DeviceEventHandler(object sender, DeviceEventArgs e);
+        public event DeviceEventHandler DeviceAttached;
+        public event DeviceEventHandler DeviceDetached;
+
         public void Poll()
         {
+            bool gotResponse = false;
             while (_stream.DataAvailable)
             {
                 var reader = new BinaryReader(_stream);
                 var response = reader.ReadResponse();
-                foreach (var line in response.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                // The response doesn't contain all the device-properties, so let's just re-fetch the device-list after we're done
+                gotResponse = true;
+            }
+
+            if (gotResponse)
+            {
+                var devices = Adb.ListDevices();
+                if (_devices != null)
                 {
-                    Console.WriteLine(string.Format("line: \"{0}\"", line));
-/*
-                    var parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                    var identifier = parts[0];
-                    var product = parts[2].Split(':')[1];
-                    var model = parts[3].Split(':')[1];
-                    var device = parts[4].Split(':')[1];
-                    ret.Add(new Device(identifier, product, model, device));
- */
+                    // diff the old and new device lists!
+
+                    if (DeviceDetached != null)
+                        foreach (var device in _devices)
+                            if (devices.All(d => d.Serial != device.Serial))
+                                DeviceDetached(this, new DeviceEventArgs() { Device = device });
+
+                    if (DeviceAttached != null)
+                        foreach (var device in devices)
+                            if (_devices.All(d => d.Serial != device.Serial))
+                                DeviceAttached(this, new DeviceEventArgs() { Device = device });
                 }
+                else
+                {
+                    // all devices were attached!
+                    if (DeviceAttached != null)
+                        foreach (var device in devices)
+                            DeviceAttached(this, new DeviceEventArgs() { Device = device });
+                }
+                _devices = devices;
             }
         }
     }
@@ -193,8 +226,8 @@ namespace AdbTest
                 }
 
                 var deviceListener = new DeviceListener();
-                // deviceListener.DeviceAttached += (object sender, DeviceListener.DeviceEventArgs a) => Console.WriteLine("attached: " + a.Device.ToString());
-                // deviceListener.DeviceDetached += (object sender, DeviceListener.DeviceEventArgs a) => Console.WriteLine("detached: " + a.Device.ToString());
+                deviceListener.DeviceAttached += (object sender, DeviceListener.DeviceEventArgs a) => Console.WriteLine("attached: " + a.Device.ToString());
+                deviceListener.DeviceDetached += (object sender, DeviceListener.DeviceEventArgs a) => Console.WriteLine("detached: " + a.Device.ToString());
 
                 while (true)
                     deviceListener.Poll();
