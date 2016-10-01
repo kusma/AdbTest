@@ -38,6 +38,18 @@ namespace AdbTest
             return Encoding.UTF8.GetString(response);
         }
 
+        public void Forward(string local, string remote)
+        {
+            var stream = Adb.ConnectToAdb();
+
+            var writer = new BinaryWriter(stream);
+            writer.Write(Adb.FormatAdbMessage(string.Format("host-serial:{0}:forward:{1};{2}", Serial, local, remote)));
+            writer.Flush();
+
+            var reader = new BinaryReader(stream);
+            reader.Expect("OKAY");
+        }
+
         public override string ToString()
         {
             return "{ Serial: " + Serial
@@ -232,6 +244,7 @@ namespace AdbTest
                 {
                     Console.WriteLine("attached: " + a.Device.ToString());
                     Console.WriteLine(string.Format("response:\n---8<---\n{0}\n---8<---", a.Device.Shell("ls")));
+                    a.Device.Forward("tcp:1337", "tcp:1337");
                 };
                 deviceListener.DeviceDetached += (object sender, DeviceListener.DeviceEventArgs a) => Console.WriteLine("detached: " + a.Device.ToString());
 
