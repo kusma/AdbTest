@@ -103,12 +103,12 @@ namespace AdbTest
         {
             var stream = Adb.ConnectToAdb();
 
-            var streamWriter = new BinaryWriter(stream);
-            streamWriter.Write(Adb.FormatAdbMessage("host:transport:" + serial));
-            streamWriter.Flush();
+            var writer = new BinaryWriter(stream);
+            writer.Write(Adb.FormatAdbMessage("host:transport:" + serial));
+            writer.Flush();
 
-            var streamReader = new BinaryReader(stream);
-            streamReader.Expect("OKAY");
+            var reader = new BinaryReader(stream);
+            reader.Expect("OKAY");
             return stream;
         }
 
@@ -116,12 +116,12 @@ namespace AdbTest
         {
             var stream = Adb.ConnectToAdb();
 
-            var streamWriter = new BinaryWriter(stream);
-            streamWriter.Write(Adb.FormatAdbMessage("host:track-devices"));
-            streamWriter.Flush();
+            var writer = new BinaryWriter(stream);
+            writer.Write(Adb.FormatAdbMessage("host:track-devices"));
+            writer.Flush();
 
-            var streamReader = new BinaryReader(stream);
-            streamReader.Expect("OKAY");
+            var reader = new BinaryReader(stream);
+            reader.Expect("OKAY");
 
             return stream;
         }
