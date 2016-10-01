@@ -225,13 +225,14 @@ namespace AdbTest
             {
                 var devices = Adb.ListDevices();
                 foreach (var device in devices)
-                {
                     Console.WriteLine(device.ToString());
-                    Console.WriteLine(string.Format("response:\n---8<---\n{0}\n---8<---", device.Shell("ls")));
-                }
 
                 var deviceListener = new DeviceListener();
-                deviceListener.DeviceAttached += (object sender, DeviceListener.DeviceEventArgs a) => Console.WriteLine("attached: " + a.Device.ToString());
+                deviceListener.DeviceAttached += (object sender, DeviceListener.DeviceEventArgs a) =>
+                {
+                    Console.WriteLine("attached: " + a.Device.ToString());
+                    Console.WriteLine(string.Format("response:\n---8<---\n{0}\n---8<---", a.Device.Shell("ls")));
+                };
                 deviceListener.DeviceDetached += (object sender, DeviceListener.DeviceEventArgs a) => Console.WriteLine("detached: " + a.Device.ToString());
 
                 while (true)
