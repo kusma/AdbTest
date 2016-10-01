@@ -23,6 +23,21 @@ namespace AdbTest
         public readonly string Model;
         public readonly string DeviceString;
 
+        public string Shell(string cmd)
+        {
+            var stream = Adb.TransportSerial(Serial);
+
+            var writer = new BinaryWriter(stream);
+            writer.Write(Adb.FormatAdbMessage("shell:" + cmd));
+            writer.Flush();
+
+            var reader = new BinaryReader(stream);
+            reader.Expect("OKAY");
+
+            var response = reader.ReadAllBytes();
+            return Encoding.UTF8.GetString(response);
+        }
+
         public override string ToString()
         {
             return "{ Serial: " + Serial
@@ -212,17 +227,7 @@ namespace AdbTest
                 foreach (var device in devices)
                 {
                     Console.WriteLine(device.ToString());
-                    var stream = Adb.TransportSerial(device.Serial);
-
-                    var writer = new BinaryWriter(stream);
-                    writer.Write(Adb.FormatAdbMessage("shell:ls"));
-                    writer.Flush();
-
-                    var reader = new BinaryReader(stream);
-                    reader.Expect("OKAY");
-
-                    var response = reader.ReadAllBytes();
-                    Console.WriteLine(string.Format("response:\n---8<---\n{0}\n---8<---", Encoding.UTF8.GetString(response)));
+                    Console.WriteLine(string.Format("response:\n---8<---\n{0}\n---8<---", device.Shell("ls")));
                 }
 
                 var deviceListener = new DeviceListener();
