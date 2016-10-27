@@ -113,10 +113,10 @@ namespace AdbTest
 
         public static Stream TransportSerial(string serial)
         {
-            var stream = Adb.ConnectToAdb();
+            var stream = ConnectToAdb();
 
             var writer = new BinaryWriter(stream);
-            writer.Write(Adb.FormatAdbMessage("host:transport:" + serial));
+            writer.Write(FormatAdbMessage("host:transport:" + serial));
             writer.Flush();
 
             var reader = new BinaryReader(stream);
@@ -126,10 +126,10 @@ namespace AdbTest
 
         public static NetworkStream TrackDevices()
         {
-            var stream = Adb.ConnectToAdb();
+            var stream = ConnectToAdb();
 
             var writer = new BinaryWriter(stream);
-            writer.Write(Adb.FormatAdbMessage("host:track-devices"));
+            writer.Write(FormatAdbMessage("host:track-devices"));
             writer.Flush();
 
             var reader = new BinaryReader(stream);
@@ -140,10 +140,10 @@ namespace AdbTest
 
         public static Device[] ListDevices()
         {
-            var stream = Adb.ConnectToAdb();
+            var stream = ConnectToAdb();
 
             var writer = new BinaryWriter(stream);
-            writer.Write(Adb.FormatAdbMessage("host:devices-l"));
+            writer.Write(FormatAdbMessage("host:devices-l"));
             writer.Flush();
 
             var reader = new BinaryReader(stream);
