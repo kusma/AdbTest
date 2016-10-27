@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace AdbTest
 {
-    public class Device
+    public struct Device
     {
         public Device(string serial, string product, string model, string device)
         {
@@ -22,33 +22,6 @@ namespace AdbTest
         public readonly string Product;
         public readonly string Model;
         public readonly string DeviceString;
-
-        public string Shell(string cmd)
-        {
-            var stream = Adb.TransportSerial(Serial);
-
-            var writer = new BinaryWriter(stream);
-            writer.Write(Adb.FormatAdbMessage("shell:" + cmd));
-            writer.Flush();
-
-            var reader = new BinaryReader(stream);
-            reader.Expect("OKAY");
-
-            var response = reader.ReadAllBytes();
-            return Encoding.UTF8.GetString(response);
-        }
-
-        public void Forward(string local, string remote)
-        {
-            var stream = Adb.ConnectToAdb();
-
-            var writer = new BinaryWriter(stream);
-            writer.Write(Adb.FormatAdbMessage(string.Format("host-serial:{0}:forward:{1};{2}", Serial, local, remote)));
-            writer.Flush();
-
-            var reader = new BinaryReader(stream);
-            reader.Expect("OKAY");
-        }
 
         public override string ToString()
         {
@@ -166,6 +139,33 @@ namespace AdbTest
             }
             return ret.ToArray();
         }
+
+        public static string Shell(Device device, string cmd)
+        {
+            var stream = Adb.TransportSerial(device.Serial);
+
+            var writer = new BinaryWriter(stream);
+            writer.Write(Adb.FormatAdbMessage("shell:" + cmd));
+            writer.Flush();
+
+            var reader = new BinaryReader(stream);
+            reader.Expect("OKAY");
+
+            var response = reader.ReadAllBytes();
+            return Encoding.UTF8.GetString(response);
+        }
+
+        public static void Forward(Device device, string local, string remote)
+        {
+            var stream = Adb.ConnectToAdb();
+
+            var writer = new BinaryWriter(stream);
+            writer.Write(Adb.FormatAdbMessage(string.Format("host-serial:{0}:forward:{1};{2}", device.Serial, local, remote)));
+            writer.Flush();
+
+            var reader = new BinaryReader(stream);
+            reader.Expect("OKAY");
+        }
     }
 
     public class DeviceListener
@@ -243,8 +243,8 @@ namespace AdbTest
                 deviceListener.DeviceAttached += (object sender, DeviceListener.DeviceEventArgs a) =>
                 {
                     Console.WriteLine("attached: " + a.Device.ToString());
-                    Console.WriteLine(string.Format("response:\n---8<---\n{0}\n---8<---", a.Device.Shell("ls")));
-                    a.Device.Forward("tcp:1337", "tcp:1337");
+                    Console.WriteLine(string.Format("response:\n---8<---\n{0}\n---8<---", Adb.Shell(a.Device, "ls")));
+                    Adb.Forward(a.Device, "tcp:1337", "tcp:1337");
                 };
                 deviceListener.DeviceDetached += (object sender, DeviceListener.DeviceEventArgs a) => Console.WriteLine("detached: " + a.Device.ToString());
 
