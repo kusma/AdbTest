@@ -131,7 +131,7 @@ namespace AdbTest
             return Encoding.UTF8.GetBytes(string.Format("{0:X4}{1}", message.Length, message));
         }
 
-        public static Stream TransportSerial(string serial)
+        static Stream TransportSerial(string serial)
         {
             var stream = ConnectToAdb();
 
