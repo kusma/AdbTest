@@ -72,12 +72,32 @@ namespace AdbTest
 
     static class Adb
     {
+        static readonly EndPoint EndPoint = new IPEndPoint(IPAddress.Loopback, 5037);
+
         public static NetworkStream ConnectToAdb()
         {
-            EndPoint endPoint = new IPEndPoint(IPAddress.Loopback, 5037);
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            socket.Connect(endPoint);
+            socket.Connect(EndPoint);
             return new NetworkStream(socket);
+        }
+
+        public static void EnsureServerStarted(string executablePath)
+        {
+            using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+            {
+                try
+                {
+                    socket.Connect(EndPoint);
+                    socket.Close();
+                }
+                catch (SocketException ex)
+                {
+                    if (ex.SocketErrorCode != SocketError.ConnectionRefused)
+                        throw;
+
+                    StartServer(executablePath);
+                }
+            }
         }
 
         public static void StartServer(string executablePath)
@@ -262,7 +282,7 @@ namespace AdbTest
         {
             try
             {
-                Adb.StartServer("adb.exe");
+                Adb.EnsureServerStarted("adb.exe");
 
                 var devices = Adb.ListDevices();
                 foreach (var device in devices)
