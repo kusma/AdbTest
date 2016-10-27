@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Linq;
+using System.Diagnostics;
 
 namespace AdbTest
 {
@@ -69,7 +70,7 @@ namespace AdbTest
         }
     }
 
-    class Adb
+    static class Adb
     {
         public static NetworkStream ConnectToAdb()
         {
@@ -79,7 +80,33 @@ namespace AdbTest
             return new NetworkStream(socket);
         }
 
-        public static byte[] FormatAdbMessage(string message)
+        public static void StartServer(string executablePath)
+        {
+            using (Process proc = new Process())
+            {
+                proc.StartInfo = new ProcessStartInfo()
+                {
+                    CreateNoWindow = false,
+                    UseShellExecute = false,
+                    FileName = executablePath,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    Arguments = "start-server",
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                };
+
+                proc.Start();
+                proc.StandardInput.Close();
+                var stdErr = proc.StandardError.ReadToEnd();
+                var stdOut = proc.StandardOutput.ReadToEnd();
+                proc.WaitForExit();
+                if (proc.ExitCode != 0)
+                    throw new Exception("adb failed: " + stdErr);
+            }
+        }
+
+        static byte[] FormatAdbMessage(string message)
         {
             return Encoding.UTF8.GetBytes(string.Format("{0:X4}{1}", message.Length, message));
         }
@@ -235,6 +262,8 @@ namespace AdbTest
         {
             try
             {
+                Adb.StartServer("adb.exe");
+
                 var devices = Adb.ListDevices();
                 foreach (var device in devices)
                     Console.WriteLine(device.ToString());
